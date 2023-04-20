@@ -1,6 +1,6 @@
 use std::sync::{Mutex, Arc};
-use websocket::WebSocketError;
-
+use tungstenite::error::Error;
+use std::time::Duration;
 use crate::data::{self, SharedData};
 use crate::data::Usb2SnesError;
 use crate::usb2snes;
@@ -14,14 +14,14 @@ pub fn wsthread(data : Arc<Mutex<data::SharedData>>) {
         match co_return {
             Ok(plop) => usb2snes = plop,
             Err(_err) => {
-                std::thread::sleep_ms(2000);
+                std::thread::sleep(Duration::new(2, 0));
                 let mut mutex = data.lock().unwrap();
                 (*mutex).usb2snes_error = Usb2SnesError::CantConnect;
                 continue;
             }
         }
         '_attach : loop {
-            fn list_device(usb2snes : &mut SyncClient) -> Result<i32, WebSocketError> {
+            fn list_device(usb2snes : &mut SyncClient) -> Result<i32, Error> {
                 let devices = usb2snes.list_device()?;
                 if devices.len() != 0 {
                     usb2snes.attach(&devices[0])?;
@@ -92,7 +92,7 @@ const A_DOOR_STUFF : u32 = 0x7E07B5;
 // var ClipValue = memory.readUnsignedWord(Clip)
 
 
-fn actually_getting_data(usb2snes : &mut SyncClient, data : &Mutex<SharedData>) -> Result<(), WebSocketError> {
+fn actually_getting_data(usb2snes : &mut SyncClient, data : &Mutex<SharedData>) -> Result<(), Error> {
     static mut old_map_id : u16 = 0;
     let bytes = get_base_wram_value(usb2snes)?;
     let samus = sdl2::rect::Point::new(get_uword(bytes[1], bytes[2]).into(),
@@ -136,7 +136,7 @@ fn actually_getting_data(usb2snes : &mut SyncClient, data : &Mutex<SharedData>) 
     Ok(())
 }
 
-fn get_base_wram_value(usb2snes : &mut SyncClient) -> Result<Vec<u8>, WebSocketError> {
+fn get_base_wram_value(usb2snes : &mut SyncClient) -> Result<Vec<u8>, Error> {
     let mut address : Vec<u32> = vec![0; 8];
     let mut sizes : Vec<u8> = vec![2;8];
     address[0] = A_MAP_ID - 0x7E0000 + 0xF50000;
@@ -168,7 +168,7 @@ fn _get_sword(byte1 : u8, byte2 : u8) -> i16 {
     return (byte2 as i16) << 8 + (byte1 as i16)
 }
 
-fn try_to_connect() -> Result<SyncClient, WebSocketError> {
+fn try_to_connect() -> Result<SyncClient, Error> {
     let mut usb2snes = usb2snes::SyncClient::connect()?;
     usb2snes.set_name(String::from("SM TileViewer"))?;
     Ok(usb2snes)
