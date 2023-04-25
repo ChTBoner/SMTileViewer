@@ -3,8 +3,8 @@ use tungstenite::error::Error;
 use std::time::Duration;
 use crate::data::{self, SharedData};
 use crate::data::Usb2SnesError;
-use crate::usb2snes;
-use crate::usb2snes::SyncClient;
+use rusb2snes;
+use rusb2snes::SyncClient;
 
 
 pub fn wsthread(data : Arc<Mutex<data::SharedData>>) {
@@ -138,7 +138,7 @@ fn actually_getting_data(usb2snes : &mut SyncClient, data : &Mutex<SharedData>) 
 
 fn get_base_wram_value(usb2snes : &mut SyncClient) -> Result<Vec<u8>, Error> {
     let mut address : Vec<u32> = vec![0; 8];
-    let mut sizes : Vec<u8> = vec![2;8];
+    let mut sizes : Vec<usize> = vec![2;8];
     address[0] = A_MAP_ID - 0x7E0000 + 0xF50000;
     address[1] = A_SAMUS_X - 0x7E0000 + 0xF50000;
     address[2] = A_SAMUS_Y - 0x7E0000 + 0xF50000;
@@ -155,21 +155,21 @@ fn get_base_wram_value(usb2snes : &mut SyncClient) -> Result<Vec<u8>, Error> {
     sizes[5] = 2;
     sizes[6] = 1;
     sizes[7] = 2;
-    return usb2snes.get_multi_address(address, sizes);
+    usb2snes.get_multi_address_as_u8(address, sizes)
 }
 
 // This is dumb, but << give me overflow error
 fn get_uword(byte1 : u8, byte2 : u8) -> u16 {
     //println!("get_uword: {:x} {:x}", byte1, byte2);
-    return (u16::from(byte2) & 0x00FF) * 256 + u16::from(byte1);
+    (u16::from(byte2) & 0x00FF) * 256 + u16::from(byte1)
 }
 
 fn _get_sword(byte1 : u8, byte2 : u8) -> i16 {
-    return (byte2 as i16) << 8 + (byte1 as i16)
+    (byte2 as i16) << 8 + (byte1 as i16)
 }
 
 fn try_to_connect() -> Result<SyncClient, Error> {
-    let mut usb2snes = usb2snes::SyncClient::connect()?;
+    let mut usb2snes = SyncClient::connect()?;
     usb2snes.set_name(String::from("SM TileViewer"))?;
     Ok(usb2snes)
 }

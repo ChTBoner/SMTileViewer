@@ -15,7 +15,6 @@ use std::env;
 mod wsthread;
 mod data;
 mod mycanvas;
-mod usb2snes;
 //mod gamearea;
 
 
